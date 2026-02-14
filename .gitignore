@@ -1,0 +1,13 @@
+# Environments
+.env
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs and databases (ถ้าอนาคตมีการเก็บ Log หรือ SQLite)
+*.log
+*.sqlite3
