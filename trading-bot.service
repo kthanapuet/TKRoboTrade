@@ -1,0 +1,18 @@
+[Unit]
+Description=TK Robo Trade - Automated Trading Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/home/YOUR_USERNAME/TKRoboTrade
+Environment="PATH=/home/YOUR_USERNAME/TKRoboTrade/venv/bin"
+ExecStart=/home/YOUR_USERNAME/TKRoboTrade/venv/bin/python bot.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/YOUR_USERNAME/TKRoboTrade/logs/bot.log
+StandardError=append:/home/YOUR_USERNAME/TKRoboTrade/logs/error.log
+
+[Install]
+WantedBy=multi-user.target
