@@ -8,6 +8,17 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Logs and databases (ถ้าอนาคตมีการเก็บ Log หรือ SQLite)
+# Logs and databases
 *.log
 *.sqlite3
+
+# Backtest results
+*.csv
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

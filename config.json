@@ -1,0 +1,97 @@
+{
+    "_comment_active_strategy": "Choose your strategy: 'EMACrossover', 'Supertrend', or 'BollingerRSI'",
+    "_comment_when_to_use": {
+        "EMACrossover": "DEFAULT - Best overall (+231%). Use for Bull/Normal markets",
+        "Supertrend": "High Win Rate (+194%, 43% WR). Good for Volatile markets",
+        "BollingerRSI": "DEFENSIVE (+30%). Use only in Bear/Sideways markets"
+    },
+    "active_strategy": "EMACrossover",
+    "strategies": {
+        "EMACrossover": {
+            "_description": "EMA Crossover - Best Overall Performance",
+            "_performance": "Return: +231% | Win Rate: 36% | Best for: Bull Markets",
+            "fast_window": 5,
+            "slow_window": 20,
+            "stop_loss_pct": 0.05,
+            "take_profit_pct": 0.0,
+            "trailing_stop_activation_pct": 0.50,
+            "trailing_stop_pct": 0.05
+        },
+        "Supertrend": {
+            "_description": "Supertrend - Highest Win Rate, ATR-based",
+            "_performance": "Return: +194% | Win Rate: 43% | Best for: Volatile Markets",
+            "period": 7,
+            "multiplier": 2,
+            "stop_loss_pct": 0.05,
+            "take_profit_pct": 0.0,
+            "trailing_stop_activation_pct": 0.50,
+            "trailing_stop_pct": 0.05
+        },
+        "BollingerRSI": {
+            "_description": "Bollinger Bands + RSI - Mean Reversion (Defensive)",
+            "_performance": "Return: +30% | Win Rate: 41% | Best for: Bear/Sideways Markets",
+            "_note": "Only use when market is clearly bearish (60-day return < -15%)",
+            "bb_period": 20,
+            "bb_std": 2,
+            "rsi_period": 14,
+            "rsi_oversold": 40,
+            "rsi_overbought": 60,
+            "stop_loss_pct": 0.05,
+            "take_profit_pct": 0.0,
+            "trailing_stop_activation_pct": 0.50,
+            "trailing_stop_pct": 0.05
+        },
+        "SMACrossover": {
+            "_description": "SMA Crossover - Original Strategy (Deprecated)",
+            "_performance": "Return: +202% | Win Rate: 41% | Replaced by EMA",
+            "fast_window": 5,
+            "slow_window": 20,
+            "stop_loss_pct": 0.05,
+            "take_profit_pct": 0.0,
+            "trailing_stop_activation_pct": 0.50,
+            "trailing_stop_pct": 0.05
+        }
+    },
+    "portfolio": [
+        {
+            "symbol": "NVDA80.BK",
+            "allocation_check": 0.1
+        },
+        {
+            "symbol": "MSFT80.BK",
+            "allocation_check": 0.1
+        },
+        {
+            "symbol": "GOOG80.BK",
+            "allocation_check": 0.1
+        },
+        {
+            "symbol": "NDX01.BK",
+            "allocation_check": 0.1
+        },
+        {
+            "symbol": "AAPL80.BK",
+            "allocation_check": 0.1
+        },
+        {
+            "symbol": "TSLA80.BK",
+            "allocation_check": 0.1
+        },
+        {
+            "symbol": "E1VFVN3001.BK",
+            "allocation_check": 0.1
+        },
+        {
+            "symbol": "SIRI.BK",
+            "allocation_check": 0.1
+        },
+        {
+            "symbol": "TRUE.BK",
+            "allocation_check": 0.1
+        },
+        {
+            "symbol": "WHA.BK",
+            "allocation_check": 0.1
+        }
+    ]
+}
