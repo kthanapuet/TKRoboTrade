@@ -10,7 +10,11 @@ import time
 import json
 import pandas as pd
 from datetime import datetime, time as datetime_time
+import pytz
 from dotenv import load_dotenv
+
+# Bangkok Timezone
+BANGKOK_TZ = pytz.timezone("Asia/Bangkok")
 from settrade_v2 import Investor
 
 # โหลด Environment Variables
@@ -28,7 +32,7 @@ from utils.notifier import LineNotifier
 # ฟังก์ชันเช็คเวลาตลาด (Market Hours)
 # ---------------------------------------------------------
 def is_market_open():
-    now = datetime.now()
+    now = datetime.now(BANGKOK_TZ)
     if now.weekday() > 4:  # เสาร์ (5) - อาทิตย์ (6)
         return False
 
@@ -49,7 +53,9 @@ def run_bot(
     investor, account_no, pin, strategies_map, notifier, portfolio_config, trade_tracker
 ):
     try:
-        print(f"\n[{datetime.now().strftime('%H:%M:%S')}] เริ่มตรวจสอบ Portfolio...")
+        print(
+            f"\n[{datetime.now(BANGKOK_TZ).strftime('%H:%M:%S')}] เริ่มตรวจสอบ Portfolio..."
+        )
         market = investor.MarketData()
         equity = investor.Equity(account_no=account_no)
         portfolio_info = equity.get_portfolios()
@@ -213,7 +219,7 @@ def run_bot(
                 msg += f"💰 Investment: {total_investment:,.2f} THB\n"
                 msg += f"📈 Entry Price: {latest_price:.2f}\n"
                 msg += f"📦 Volume: {trade_volume:,} shares\n"
-                msg += f"📅 Date: {datetime.now().strftime('%d/%m/%y %H:%M')}"
+                msg += f"📅 Date: {datetime.now(BANGKOK_TZ).strftime('%d/%m/%y %H:%M')}"
 
                 print(f"   🚀 {msg}")
                 notifier.send(msg)
@@ -272,7 +278,7 @@ def run_bot(
                     msg += f"📈 Entry: {entry_price:.2f} | Exit: {latest_price:.2f}\n"
                     msg += f"📦 Volume: {current_vol:,} shares\n"
                     msg += f"⏱️ Duration: {duration_str}\n"
-                    msg += f"📅 {entry_date.strftime('%d/%m/%y') if entry_date else 'N/A'} → {datetime.now().strftime('%d/%m/%y')}"
+                    msg += f"📅 {entry_date.strftime('%d/%m/%y') if entry_date else 'N/A'} → {datetime.now(BANGKOK_TZ).strftime('%d/%m/%y')}"
                 else:
                     # Fallback if no entry info
                     msg = f"📉 Sell Signal: {trade_symbol} @ {latest_price}\nReason: {exit_reason}"
@@ -301,7 +307,9 @@ def run_bot(
             else:
                 print("   💤 Wait...")
 
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] จบรอบการทำงาน. รอรอบถัดไป...")
+        print(
+            f"[{datetime.now(BANGKOK_TZ).strftime('%H:%M:%S')}] จบรอบการทำงาน. รอรอบถัดไป..."
+        )
 
     except Exception as e:
         error_msg = f"❌ เกิดข้อผิดพลาดใน Main Loop: {e}"
@@ -331,7 +339,7 @@ def send_daily_summary(investor, account_no, notifier):
         cash = float(acct.get("cash_balance") or acct.get("cashBalance", 0))
         total_equity = float(total_value) + float(cash)
 
-        msg = f"📊 Daily Summary ({datetime.now().strftime('%Y-%m-%d')})\n"
+        msg = f"📊 Daily Summary ({datetime.now(BANGKOK_TZ).strftime('%Y-%m-%d')})\n"
         msg += f"💰 Total Equity: {total_equity:,.2f} THB\n"
         msg += f"💵 Cash Balance: {float(cash):,.2f} THB\n"
         msg += f"📦 Stock Value: {float(total_value):,.2f} THB\n"
@@ -473,7 +481,7 @@ if __name__ == "__main__":
     last_heartbeat_hour = -1
 
     while True:
-        now = datetime.now()
+        now = datetime.now(BANGKOK_TZ)
 
         # Reset summary flag at midnight
         if now.hour == 0 and now.minute < 5:
