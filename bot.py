@@ -165,10 +165,31 @@ def run_bot(
 
             # 4.1 Check Signal
             if latest_data["Position"] == 2:  # Buy Signal
-                if current_vol == 0:
-                    action = "BUY"
-                else:
+                # เช็คทั้ง portfolio และ trade_tracker เพื่อป้องกันการซื้อซ้ำ
+                if current_vol == 0 and trade_symbol not in trade_tracker:
+                    # เช็คเพิ่ม: ดู order history ว่ามี order ล่าสุดไหม (กรณี bot restart)
+                    try:
+                        today_orders = equity.get_orders()
+                        recent_buy = any(
+                            o["symbol"] == trade_symbol
+                            and o["side"] == "Buy"
+                            and o["order_status"]
+                            in ["Submitted", "Matched", "Partial_Filled"]
+                            for o in today_orders.get("order_list", [])
+                        )
+                        if recent_buy:
+                            print(
+                                "   ⚠️ (Buy Signal) แต่มี Order ล่าสุดอยู่แล้ว -> Skip Duplicate"
+                            )
+                        else:
+                            action = "BUY"
+                    except Exception:
+                        # ถ้าเช็ค order history ไม่ได้ ให้ BUY ไปก่อน (ไว้ใจ trade_tracker)
+                        action = "BUY"
+                elif current_vol > 0:
                     print("   ⚠️ (Buy Signal) แต่มีของอยู่แล้ว -> Hold")
+                elif trade_symbol in trade_tracker:
+                    print("   ⚠️ (Buy Signal) แต่มี Order รออยู่แล้ว -> Skip Duplicate")
 
             elif latest_data["Position"] == -2:  # Sell Signal
                 if current_vol > 0:
@@ -179,11 +200,11 @@ def run_bot(
             # 4.2 Send Order
             if action == "BUY":
                 # Get Entry Reason from Status_Text
-                entry_reason = latest_data.get('Status_Text', 'SMA Crossover')
-                
+                entry_reason = latest_data.get("Status_Text", "SMA Crossover")
+
                 # Calculate total investment
                 total_investment = trade_volume * latest_price
-                
+
                 msg = f"� BUY ORDER\n"
                 msg += f"━━━━━━━━━━━━━━━━\n"
                 msg += f"📊 Symbol: {trade_symbol}\n"
@@ -193,7 +214,7 @@ def run_bot(
                 msg += f"📈 Entry Price: {latest_price:.2f}\n"
                 msg += f"📦 Volume: {trade_volume:,} shares\n"
                 msg += f"📅 Date: {datetime.now().strftime('%d/%m/%y %H:%M')}"
-                
+
                 print(f"   🚀 {msg}")
                 notifier.send(msg)
                 try:
@@ -206,12 +227,12 @@ def run_bot(
                         price_type="Limit",
                     )
                     notifier.send(f"✅ Order Sent: {order.get('order_no', 'N/A')}")
-                    
+
                     # Track Entry Info
                     trade_tracker[trade_symbol] = {
-                        'entry_date': datetime.now(),
-                        'entry_price': latest_price,
-                        'entry_vol': trade_volume
+                        "entry_date": datetime.now(),
+                        "entry_price": latest_price,
+                        "entry_vol": trade_volume,
                     }
                 except Exception as ex:
                     notifier.send(f"❌ Order Failed: {ex}")
@@ -401,10 +422,10 @@ if __name__ == "__main__":
         symbol = item["symbol"]
         # ผสม Config: Base + Override
         base_conf = strategies_config.get(base_strat_name, {}).copy()
-        
+
         # Remove comment fields from config
-        base_conf = {k: v for k, v in base_conf.items() if not k.startswith('_')}
-        
+        base_conf = {k: v for k, v in base_conf.items() if not k.startswith("_")}
+
         override_conf = item.get("strategy_override", {})
         final_conf = {**base_conf, **override_conf}
 
