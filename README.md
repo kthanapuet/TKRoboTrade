@@ -133,6 +133,47 @@ Edit `config.json` to customize:
 
 ---
 
+## ☁️ Server Deployment & Quick Commands (GCP / SSH)
+
+Use these commands whenever you update the code or need to restart the server processes.
+
+**1. Pull Code Updates (After pushing to GitHub)**
+```bash
+cd ~/TKRoboTrade
+git pull origin main
+```
+
+**2. Manage Background Processes (Screen)**
+We run 2 independent processes: the Trading Bot and the Web Dashboard. We use `screen` to keep them alive after closing SSH.
+
+*👉 Start/Restart the Bot:*
+```bash
+screen -R bot             # Enter the bot screen (or create if not exist)
+cd ~/TKRoboTrade          # Go to folder
+# (Hit Ctrl+C to stop the old process if it is running)
+
+source venv/bin/activate  # Activate python environment
+python bot.py             # Start the bot
+# Detach safely: Press [Ctrl+A] then [D] on your keyboard
+```
+
+*👉 Start/Restart the Dashboard (Web UI):*
+```bash
+screen -R ui              # Enter the UI screen (or create if not exist)
+cd ~/TKRoboTrade
+# (Hit Ctrl+C to stop the old process if it is running)
+
+source venv/bin/activate
+python api_server.py      # Start the web server
+# Detach safely: Press [Ctrl+A] then [D]
+```
+
+**3. Accessing the Dashboard**
+- **Direct IP:** `http://<GCP-PUBLIC-IP>:5000` (Ensure custom GCP Firewall Rule is created to open TCP Port `5000` to `0.0.0.0/0`)
+- **Custom Domain Name:** Point your domain's A Record to your GCP IP and access via `http://your-domain.com:5000`
+
+---
+
 ## 📜 License
 
 Personal project by Thanapuet Kaewmanee (TK)
