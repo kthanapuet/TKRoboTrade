@@ -14,7 +14,7 @@
             "slow_window": 20,
             "stop_loss_pct": 0.05,
             "take_profit_pct": 0.0,
-            "trailing_stop_activation_pct": 0.50,
+            "trailing_stop_activation_pct": 0.5,
             "trailing_stop_pct": 0.05
         },
         "Supertrend": {
@@ -24,7 +24,7 @@
             "multiplier": 2,
             "stop_loss_pct": 0.05,
             "take_profit_pct": 0.0,
-            "trailing_stop_activation_pct": 0.50,
+            "trailing_stop_activation_pct": 0.5,
             "trailing_stop_pct": 0.05
         },
         "BollingerRSI": {
@@ -38,7 +38,7 @@
             "rsi_overbought": 60,
             "stop_loss_pct": 0.05,
             "take_profit_pct": 0.0,
-            "trailing_stop_activation_pct": 0.50,
+            "trailing_stop_activation_pct": 0.5,
             "trailing_stop_pct": 0.05
         },
         "SMACrossover": {
@@ -48,14 +48,15 @@
             "slow_window": 20,
             "stop_loss_pct": 0.05,
             "take_profit_pct": 0.0,
-            "trailing_stop_activation_pct": 0.50,
+            "trailing_stop_activation_pct": 0.5,
             "trailing_stop_pct": 0.05
         }
     },
     "portfolio": [
         {
             "symbol": "NVDA80.BK",
-            "allocation_check": 0.1
+            "allocation_check": 0.1,
+            "enabled": true
         },
         {
             "symbol": "MSFT80.BK",
@@ -83,15 +84,23 @@
         },
         {
             "symbol": "SIRI.BK",
-            "allocation_check": 0.1
+            "allocation_check": 0.1,
+            "enabled": false
         },
         {
             "symbol": "TRUE.BK",
-            "allocation_check": 0.1
+            "allocation_check": 0.1,
+            "enabled": false
         },
         {
-            "symbol": "WHA.BK",
-            "allocation_check": 0.1
+            "symbol": "UOB19.BK",
+            "allocation_check": 0.1,
+            "enabled": true
+        },
+        {
+            "symbol": "GOLD19.BK",
+            "allocation_check": 0.1,
+            "enabled": true
         }
     ]
 }

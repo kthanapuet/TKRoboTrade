@@ -10,7 +10,7 @@ from settrade_v2 import Investor
 # Load main bot components
 from bot import run_bot, send_daily_summary, is_market_open
 from strategies.sma_cross import SMACrossover
-from utils.notifier import LineNotifier
+from utils.notifier import Notifier
 
 
 # Override market open check for testing
@@ -40,7 +40,7 @@ if __name__ == "__main__":
         portfolio_config = app_config.get("portfolio", [])
         strategies_config = app_config.get("strategies", {})
 
-    notifier = LineNotifier()
+    notifier = Notifier()
 
     # 2. Init Strategies
     strategies_map = {}

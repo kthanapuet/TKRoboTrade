@@ -25,7 +25,7 @@ from strategies.sma_cross import SMACrossover
 from strategies.ema_cross import EMACrossover
 from strategies.supertrend import Supertrend
 from strategies.bbands_rsi import BollingerRSI
-from utils.notifier import LineNotifier
+from utils.notifier import Notifier
 
 
 # ---------------------------------------------------------
@@ -419,7 +419,7 @@ if __name__ == "__main__":
         exit()
 
     # 3. เตรียม Tools & Build Strategies Map
-    notifier = LineNotifier()
+    notifier = Notifier()
 
     # Map: 'PTT.BK' -> StrategyInstance
     strategies_map = {}

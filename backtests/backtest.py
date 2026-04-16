@@ -9,9 +9,9 @@ import sys
 # ---------------------------------------------------------
 # เพิ่ม Path เพื่อเรียก Module Strategies/Utils ได้
 # ---------------------------------------------------------
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from strategies.sma_cross import SMACrossover
+from strategies.ema_cross import EMACrossover
 
 
 class Backtester:
@@ -38,7 +38,7 @@ class Backtester:
         # Load Config
         try:
             with open("config.json", "r") as f:
-                self.config = json.load(f)["strategies"].get("SMACrossover", {})
+                self.config = json.load(f)["strategies"].get("EMACrossover", {})
         except FileNotFoundError:
             self.config = {}
 
@@ -81,7 +81,7 @@ class Backtester:
         print(
             "DEBUG: Non-zero Position events:\n",
             full_df[full_df["Position"] != 0][
-                ["close", "SMA_15", "SMA_50", "Signal", "Position"]
+                ["close", "EMA_Fast", "EMA_Slow", "Position"]
             ],
         )
 
@@ -238,7 +238,7 @@ class Backtester:
 
 if __name__ == "__main__":
     backtester = Backtester(
-        SMACrossover, symbol="PTT.BK", start_date="2022-01-01", end_date="2023-12-31"
+        EMACrossover, symbol="PTT.BK", start_date="2022-01-01", end_date="2023-12-31"
     )
     backtester.run()
     backtester.stats()

@@ -10,11 +10,11 @@
 TK Robo Trade is a quantitative trading system that uses **SMA Crossover** with **Trailing Stop** strategies to trade a portfolio of 10 global growth stocks through **PI Securities** (Settrade API).
 
 **Key Features:**
-- ✅ **Momentum-Based Entry:** Fast SMA (5) / Slow SMA (20) crossover
+- ✅ **Momentum-Based Entry:** Fast EMA (5) / Slow EMA (20) crossover (Default)
+- ✅ **Web Dashboard UI:** Local web app to manage portfolio dynamically with Auto-Validation.
+- ✅ **Universal Notifications:** Supports LINE, Telegram, and Discord Webhook alerts.
 - ✅ **Smart Risk Management:** 5% Stop Loss + 50% Trailing Activation
-- ✅ **Multi-Stock Portfolio:** Automated trading for 10 stocks
-- ✅ **Real-time Monitoring:** Line Notify alerts + Daily summaries
-- ✅ **Backtested & Optimized:** +200% return on 5-year historical data
+- ✅ **Multi-Stock Portfolio:** Automated trading for 10+ stocks
 
 ---
 
@@ -42,29 +42,35 @@ LINE_TOKEN=your_line_notify_token
 python bot.py
 ```
 
+### 4. Manage Portfolio (Web UI)
+Launch the local dashboard to add, validate (YFinance), or delete stocks:
+```bash
+python api_server.py
+```
+👉 Open **http://localhost:5000** in your web browser.
+
 ---
 
 ## 📂 Project Structure
 
-```
+```text
 TKRoboTrade/
 ├── bot.py                    # Main trading bot
-├── config.json               # Strategy parameters
+├── api_server.py             # Dashboard API Backend (Flask/HTTP)
+├── dashboard.html            # Web UI for Portfolio Management
+├── config.json               # Strategy & Portfolio parameters
 ├── .env                      # API credentials (DO NOT COMMIT)
 ├── requirements.txt          # Python dependencies
 │
 ├── strategies/               # Trading strategies
 │   ├── base.py              # Base strategy class
-│   └── sma_cross.py         # SMA Crossover strategy
+│   ├── ema_cross.py         # EMA Crossover strategy (Default)
+│   └── sma_cross.py         # SMA Crossover strategy 
 │
 ├── utils/                    # Utilities
-│   └── notifier.py          # Line Notify integration
+│   └── notifier.py          # Telegram, Discord, and LINE integration
 │
 └── backtests/               # Testing & Optimization
-    ├── optimize_portfolio.py      # Grid search optimization
-    ├── backtest_portfolio.py      # Portfolio backtesting
-    ├── test_bot_cycle.py          # Bot cycle testing
-    └── optimization_results.csv   # Latest optimization results
 ```
 
 ---
@@ -100,11 +106,21 @@ python backtests/optimize_portfolio.py
 
 ## 🔔 Monitoring
 
-The bot sends notifications via **Line Notify**:
-- ✅ Buy/Sell signals
-- ✅ Hourly heartbeat (market hours)
-- ✅ Daily portfolio summary
+The bot sends notifications across your preferred platform (**Telegram, Discord, or LINE**):
+- ✅ Trading Operations (Buy/Sell signals)
+- ✅ Portfolio updates from Dashboard (Add/Delete/Toggle stocks)
+- ✅ Hourly heartbeat (market hours) & Daily summary
 - ⚠️ Error alerts
+
+To setup, just add these to your `.env`:
+```env
+# Telegram
+TELEGRAM_BOT_TOKEN="your_token"
+TELEGRAM_CHAT_ID="your_chat_id"
+
+# Discord
+DISCORD_WEBHOOK_URL="your_webhook_url"
+```
 
 ---
 
