@@ -53,6 +53,7 @@ def run_bot(
     investor, account_no, pin, strategies_map, notifier, portfolio_config, trade_tracker
 ):
     try:
+        config_changed = False
         print(
             f"\n[{datetime.now(BANGKOK_TZ).strftime('%H:%M:%S')}] เริ่มตรวจสอบ Portfolio..."
         )
@@ -89,10 +90,25 @@ def run_bot(
             # --- 2. ดึงกราฟ ---
             # ใช้ trade_symbol (เช่น PTT)
             try:
-                historical_data = market.get_candlestick(trade_symbol, "1d", 200)
+                historical_data = market.get_candlestick(trade_symbol, "1d", 250)
                 df = pd.DataFrame(historical_data)
                 df["time"] = pd.to_datetime(df["time"], unit="s")
                 df.set_index("time", inplace=True)
+                
+                # คำนวณ Long-Term Trend สำหรับส่ง Alert และเก็บลง Config
+                if len(df) >= 50:
+                    ema50_val = df["close"].ewm(span=50, adjust=False).mean().iloc[-1]
+                    ema200_val = df["close"].ewm(span=200, adjust=False).mean().iloc[-1]
+                    price_val = df["close"].iloc[-1]
+                    
+                    if price_val > ema200_val and ema50_val > ema200_val:
+                        trend_status = "🟢 แนวโน้มขาขึ้น (Uptrend)"
+                    elif price_val < ema200_val and ema50_val < ema200_val:
+                        trend_status = "🔴 แนวโน้มขาลง (Downtrend)"
+                    else:
+                        trend_status = "🟡 กำลังเลือกทาง (Sideways)"
+                else:
+                    trend_status = "⚪ ข้อมูลไม่พอสำหรับการหาแนวโน้ม"
             except Exception as e:
                 print(f"   ❌ ดึงกราฟไม่สำเร็จ: {e}")
                 continue
@@ -110,6 +126,13 @@ def run_bot(
             print(
                 f"   [{strat_name}] Close: {latest_data['close']} | {latest_data.get('Status_Text', '')}"
             )
+            
+            # --- อัปเดต Signal & Trend ลงใน Memory Config ---
+            status_text = latest_data.get('Status_Text', '')
+            if item.get("signal_text") != status_text or item.get("long_term_trend") != trend_status:
+                item["signal_text"] = status_text
+                item["long_term_trend"] = trend_status
+                config_changed = True
 
             # --- 4. Execution Logic & Cash Management ---
             # 4.1 Get Real-time Account Info
@@ -211,9 +234,10 @@ def run_bot(
                 # Calculate total investment
                 total_investment = trade_volume * latest_price
 
-                msg = f"� BUY ORDER\n"
+                msg = f"🛒 BUY ORDER\n"
                 msg += f"━━━━━━━━━━━━━━━━\n"
                 msg += f"📊 Symbol: {trade_symbol}\n"
+                msg += f"🌊 Trend: {trend_status}\n"
                 msg += f"🎯 Entry Reason: {entry_reason}\n"
                 msg += f"📈 Strategy: {strat_name}\n\n"
                 msg += f"💰 Investment: {total_investment:,.2f} THB\n"
@@ -273,6 +297,7 @@ def run_bot(
                     msg = f"{emoji} SELL ORDER\n"
                     msg += f"━━━━━━━━━━━━━━━━\n"
                     msg += f"📊 Symbol: {trade_symbol}\n"
+                    msg += f"🌊 Trend: {trend_status}\n"
                     msg += f"🚪 Exit Reason: {exit_reason}\n\n"
                     msg += f"💰 P&L: {pnl_total:,.2f} THB ({pnl_pct:+.2f}%)\n"
                     msg += f"📈 Entry: {entry_price:.2f} | Exit: {latest_price:.2f}\n"
@@ -281,7 +306,7 @@ def run_bot(
                     msg += f"📅 {entry_date.strftime('%d/%m/%y') if entry_date else 'N/A'} → {datetime.now(BANGKOK_TZ).strftime('%d/%m/%y')}"
                 else:
                     # Fallback if no entry info
-                    msg = f"📉 Sell Signal: {trade_symbol} @ {latest_price}\nReason: {exit_reason}"
+                    msg = f"📉 Sell Signal: {trade_symbol} @ {latest_price}\nReason: {exit_reason}\nTrend: {trend_status}"
 
                 print(f"   🚀 {msg}")
                 notifier.send(msg)
@@ -307,6 +332,24 @@ def run_bot(
             else:
                 print("   💤 Wait...")
 
+        # อัปเดตลงไฟล์ config.json ถ้ามีการเปลี่ยนแปลงของ signal/trend
+        if config_changed:
+            try:
+                with open("config.json", "r", encoding="utf-8") as f:
+                    app_config = json.load(f)
+                    
+                app_portfolio = app_config.get("portfolio", [])
+                for app_item in app_portfolio:
+                    for mem_item in portfolio_config:
+                        if app_item["symbol"] == mem_item["symbol"]:
+                            app_item["signal_text"] = mem_item.get("signal_text", "")
+                            app_item["long_term_trend"] = mem_item.get("long_term_trend", "")
+                            
+                with open("config.json", "w", encoding="utf-8") as f:
+                    json.dump(app_config, f, indent=4, ensure_ascii=False)
+            except Exception as e:
+                print(f"❌ Failed to persist config: {e}")
+
         print(
             f"[{datetime.now(BANGKOK_TZ).strftime('%H:%M:%S')}] จบรอบการทำงาน. รอรอบถัดไป..."
         )
@@ -320,6 +363,60 @@ def run_bot(
 # ---------------------------------------------------------
 # Report Logic
 # ---------------------------------------------------------
+def send_weekly_trend_report(investor, portfolio_config, notifier):
+    try:
+        print("📊 กำลังตรวจสอบแนวโน้มระยะยาว (Weekly Trend Check)...")
+        market = investor.MarketData()
+        
+        msg = "📈 Weekly Trend Update (Long-Term)\n━━━━━━━━━━━━━━━━\n"
+        uptrend_count = 0
+        
+        for item in portfolio_config:
+            symbol = item["symbol"]
+            trade_symbol = symbol.replace(".BK", "")
+            
+            try:
+                # ดึงข้อมูล 250 วัน (ประมาณ 1 ปีทำการ) เพื่อหาค่า EMA 200
+                historical_data = market.get_candlestick(trade_symbol, "1d", 250)
+                if not historical_data:
+                    continue
+                    
+                df = pd.DataFrame(historical_data)
+                
+                if len(df) < 50:
+                    msg += f"⚪ {trade_symbol}: ข้อมูลน้อยเกินไป\n"
+                    continue
+                    
+                df["time"] = pd.to_datetime(df["time"], unit="s")
+                df.set_index("time", inplace=True)
+                
+                df["EMA_50"] = df["close"].ewm(span=50, adjust=False).mean()
+                df["EMA_200"] = df["close"].ewm(span=200, adjust=False).mean()
+                
+                price = df["close"].iloc[-1]
+                ema50 = df["EMA_50"].iloc[-1]
+                ema200 = df["EMA_200"].iloc[-1]
+                
+                # เช็ค Trend ระยะยาว โดยอิงว่าถ้าราคาพ้น EMA 200 และ EMA 50 > 200
+                if price > ema200 and ema50 > ema200:
+                    status = "🟢 ขาขึ้น (Uptrend)"
+                    uptrend_count += 1
+                elif price < ema200 and ema50 < ema200:
+                    status = "🔴 ขาลง (Downtrend)"
+                else:
+                    status = "🟡 กำลังเลือกทาง (Sideways)"
+                
+                msg += f"• {trade_symbol}: {status}\n"
+                
+            except Exception as e:
+                print(f"   ❌ {trade_symbol} ดึงข้อมูล Trend ไม่สำเร็จ: {e}")
+                
+        msg += f"━━━━━━━━━━━━━━━━\nสรุป: เป็นขาขึ้น {uptrend_count}/{len(portfolio_config)} ตัว"
+        notifier.send(msg)
+        print("✅ Weekly trend summary sent.")
+    except Exception as e:
+        print(f"❌ Failed to run weekly trend check: {e}")
+
 def send_daily_summary(investor, account_no, notifier):
     try:
         equity = investor.Equity(account_no=account_no)
@@ -525,6 +622,11 @@ if __name__ == "__main__":
                 print("📝 Sending Daily Summary...")
                 send_daily_summary(investor, ACCOUNT_NO, notifier)
                 summary_sent = True
+                
+                # แจ้งเตือนเช็ค Trend พิเศษสัปดาห์ละ 1 ครั้ง (วันศุกร์)
+                if now.weekday() == 4:
+                    print("📝 Sending Weekly Trend Check...")
+                    send_weekly_trend_report(investor, portfolio_config, notifier)
 
             print(f"[{now.strftime('%H:%M:%S')}] นอกเวลาทำการ ตลาดปิด... 😴")
             time.sleep(60)  # Fast check to catch 17:30 time window
