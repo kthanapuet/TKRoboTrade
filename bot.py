@@ -583,6 +583,21 @@ if __name__ == "__main__":
         # Reset summary flag at midnight
         if now.hour == 0 and now.minute < 5:
             summary_sent = False
+            
+        # 2. Heartbeat Check (Every hour at minute 0-5)
+        # ส่ง Heartbeat เฉพาะวันทำการ 08:00 - 17:00 (จะได้ไม่รบกวนเวลานอน/วันหยุด)
+        if now.weekday() <= 4 and 8 <= now.hour <= 17:
+            if now.minute < 5 and now.hour != last_heartbeat_hour:
+                try:
+                    # Simple API Ping
+                    equity = investor.Equity(account_no=ACCOUNT_NO)
+                    equity.get_account_info()
+                    notifier.send(
+                        f"💓 Heartbeat [{now.strftime('%H:%M')}]\n✅ Status: Online\n📶 API: Connected"
+                    )
+                    last_heartbeat_hour = now.hour
+                except Exception as e:
+                    notifier.send(f"⚠️ Heartbeat Failed: API Error {e}")
 
         if is_market_open():
             # 1. Run Strategy (Pass trade_tracker)
@@ -595,19 +610,6 @@ if __name__ == "__main__":
                 portfolio_config,
                 trade_tracker,
             )
-
-            # 2. Heartbeat Check (Every hour at minute 0-5)
-            if now.minute < 5 and now.hour != last_heartbeat_hour:
-                try:
-                    # Simple API Ping
-                    equity = investor.Equity(account_no=ACCOUNT_NO)
-                    equity.get_account_info()
-                    notifier.send(
-                        f"💓 Heartbeat [{now.strftime('%H:%M')}]\n✅ Status: Online\n📶 API: Connected"
-                    )
-                    last_heartbeat_hour = now.hour
-                except Exception as e:
-                    notifier.send(f"⚠️ Heartbeat Failed: API Error {e}")
 
             time.sleep(300)  # Check every 5 mins
         else:
