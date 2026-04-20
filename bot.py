@@ -94,13 +94,13 @@ def run_bot(
                 df = pd.DataFrame(historical_data)
                 df["time"] = pd.to_datetime(df["time"], unit="s")
                 df.set_index("time", inplace=True)
-                
+
                 # คำนวณ Long-Term Trend สำหรับส่ง Alert และเก็บลง Config
                 if len(df) >= 50:
                     ema50_val = df["close"].ewm(span=50, adjust=False).mean().iloc[-1]
                     ema200_val = df["close"].ewm(span=200, adjust=False).mean().iloc[-1]
                     price_val = df["close"].iloc[-1]
-                    
+
                     if price_val > ema200_val and ema50_val > ema200_val:
                         trend_status = "🟢 แนวโน้มขาขึ้น (Uptrend)"
                     elif price_val < ema200_val and ema50_val < ema200_val:
@@ -126,10 +126,13 @@ def run_bot(
             print(
                 f"   [{strat_name}] Close: {latest_data['close']} | {latest_data.get('Status_Text', '')}"
             )
-            
+
             # --- อัปเดต Signal & Trend ลงใน Memory Config ---
-            status_text = latest_data.get('Status_Text', '')
-            if item.get("signal_text") != status_text or item.get("long_term_trend") != trend_status:
+            status_text = latest_data.get("Status_Text", "")
+            if (
+                item.get("signal_text") != status_text
+                or item.get("long_term_trend") != trend_status
+            ):
                 item["signal_text"] = status_text
                 item["long_term_trend"] = trend_status
                 config_changed = True
@@ -337,14 +340,16 @@ def run_bot(
             try:
                 with open("config.json", "r", encoding="utf-8") as f:
                     app_config = json.load(f)
-                    
+
                 app_portfolio = app_config.get("portfolio", [])
                 for app_item in app_portfolio:
                     for mem_item in portfolio_config:
                         if app_item["symbol"] == mem_item["symbol"]:
                             app_item["signal_text"] = mem_item.get("signal_text", "")
-                            app_item["long_term_trend"] = mem_item.get("long_term_trend", "")
-                            
+                            app_item["long_term_trend"] = mem_item.get(
+                                "long_term_trend", ""
+                            )
+
                 with open("config.json", "w", encoding="utf-8") as f:
                     json.dump(app_config, f, indent=4, ensure_ascii=False)
             except Exception as e:
@@ -367,36 +372,36 @@ def send_weekly_trend_report(investor, portfolio_config, notifier):
     try:
         print("📊 กำลังตรวจสอบแนวโน้มระยะยาว (Weekly Trend Check)...")
         market = investor.MarketData()
-        
+
         msg = "📈 Weekly Trend Update (Long-Term)\n━━━━━━━━━━━━━━━━\n"
         uptrend_count = 0
-        
+
         for item in portfolio_config:
             symbol = item["symbol"]
             trade_symbol = symbol.replace(".BK", "")
-            
+
             try:
                 # ดึงข้อมูล 250 วัน (ประมาณ 1 ปีทำการ) เพื่อหาค่า EMA 200
                 historical_data = market.get_candlestick(trade_symbol, "1d", 250)
                 if not historical_data:
                     continue
-                    
+
                 df = pd.DataFrame(historical_data)
-                
+
                 if len(df) < 50:
                     msg += f"⚪ {trade_symbol}: ข้อมูลน้อยเกินไป\n"
                     continue
-                    
+
                 df["time"] = pd.to_datetime(df["time"], unit="s")
                 df.set_index("time", inplace=True)
-                
+
                 df["EMA_50"] = df["close"].ewm(span=50, adjust=False).mean()
                 df["EMA_200"] = df["close"].ewm(span=200, adjust=False).mean()
-                
+
                 price = df["close"].iloc[-1]
                 ema50 = df["EMA_50"].iloc[-1]
                 ema200 = df["EMA_200"].iloc[-1]
-                
+
                 # เช็ค Trend ระยะยาว โดยอิงว่าถ้าราคาพ้น EMA 200 และ EMA 50 > 200
                 if price > ema200 and ema50 > ema200:
                     status = "🟢 ขาขึ้น (Uptrend)"
@@ -405,17 +410,20 @@ def send_weekly_trend_report(investor, portfolio_config, notifier):
                     status = "🔴 ขาลง (Downtrend)"
                 else:
                     status = "🟡 กำลังเลือกทาง (Sideways)"
-                
+
                 msg += f"• {trade_symbol}: {status}\n"
-                
+
             except Exception as e:
                 print(f"   ❌ {trade_symbol} ดึงข้อมูล Trend ไม่สำเร็จ: {e}")
-                
-        msg += f"━━━━━━━━━━━━━━━━\nสรุป: เป็นขาขึ้น {uptrend_count}/{len(portfolio_config)} ตัว"
+
+        msg += (
+            f"━━━━━━━━━━━━━━━━\nสรุป: เป็นขาขึ้น {uptrend_count}/{len(portfolio_config)} ตัว"
+        )
         notifier.send(msg)
         print("✅ Weekly trend summary sent.")
     except Exception as e:
         print(f"❌ Failed to run weekly trend check: {e}")
+
 
 def send_daily_summary(investor, account_no, notifier):
     try:
@@ -583,7 +591,7 @@ if __name__ == "__main__":
         # Reset summary flag at midnight
         if now.hour == 0 and now.minute < 5:
             summary_sent = False
-            
+
         # 2. Heartbeat Check (Every hour at minute 0-5)
         # ส่ง Heartbeat เฉพาะวันทำการ 08:00 - 17:00 (จะได้ไม่รบกวนเวลานอน/วันหยุด)
         if now.weekday() <= 4 and 8 <= now.hour <= 17:
@@ -624,7 +632,7 @@ if __name__ == "__main__":
                 print("📝 Sending Daily Summary...")
                 send_daily_summary(investor, ACCOUNT_NO, notifier)
                 summary_sent = True
-                
+
                 # แจ้งเตือนเช็ค Trend พิเศษสัปดาห์ละ 1 ครั้ง (วันศุกร์)
                 if now.weekday() == 4:
                     print("📝 Sending Weekly Trend Check...")

@@ -26,6 +26,8 @@ class Supertrend:
         Exit: Price crosses below Supertrend line (Trend turns bearish) OR Stop Loss
         """
         df = df.copy()
+        if df.empty:
+            return df
 
         # Ensure we have high/low columns
         if 'high' not in df.columns or 'low' not in df.columns:

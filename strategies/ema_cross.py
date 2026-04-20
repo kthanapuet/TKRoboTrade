@@ -25,6 +25,8 @@ class EMACrossover:
         Exit: EMA(fast) crosses below EMA(slow) OR Stop Loss OR Trailing Stop
         """
         df = df.copy()
+        if df.empty:
+            return df
 
         # Calculate EMAs
         df["EMA_Fast"] = df["close"].ewm(span=self.fast_window, adjust=False).mean()

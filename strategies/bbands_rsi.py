@@ -29,6 +29,8 @@ class BollingerRSI:
         Exit: Price touches upper BB AND RSI overbought OR Stop Loss
         """
         df = df.copy()
+        if df.empty:
+            return df
 
         # Calculate Bollinger Bands
         df['SMA'] = df['close'].rolling(window=self.bb_period).mean()

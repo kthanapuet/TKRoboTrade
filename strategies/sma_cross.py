@@ -6,6 +6,8 @@ class SMACrossover(BaseStrategy):
     def generate_signals(
         self, df: pd.DataFrame, current_cost: float = 0.0
     ) -> pd.DataFrame:
+        if df.empty:
+            return df
         fast = self.config.get("fast_window", 15)
         slow = self.config.get("slow_window", 50)
         sl_pct = self.config.get("stop_loss_pct", 0.05)
