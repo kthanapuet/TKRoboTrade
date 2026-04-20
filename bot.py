@@ -92,6 +92,11 @@ def run_bot(
             try:
                 historical_data = market.get_candlestick(trade_symbol, "1d", 250)
                 df = pd.DataFrame(historical_data)
+                
+                if df.empty:
+                    print(f"   ⚠️ [{trade_symbol}] ไม่มีข้อมูลกราฟจาก API ข้ามการวิเคราะห์...")
+                    continue
+
                 df["time"] = pd.to_datetime(df["time"], unit="s")
                 df.set_index("time", inplace=True)
 
@@ -110,7 +115,7 @@ def run_bot(
                 else:
                     trend_status = "⚪ ข้อมูลไม่พอสำหรับการหาแนวโน้ม"
             except Exception as e:
-                print(f"   ❌ ดึงกราฟไม่สำเร็จ: {e}")
+                print(f"   ❌ [{trade_symbol}] ดึงกราฟไม่สำเร็จ: {e}")
                 continue
 
             # --- 3. เรียก Strategy ที่เตรียมไว้ ---
@@ -120,6 +125,11 @@ def run_bot(
                 continue
 
             df = strategy.generate_signals(df, current_cost=current_cost)
+            
+            if df.empty:
+                print(f"   ⚠️ [{trade_symbol}] Strategy คืนค่า DataFrame ว่างเปล่า ข้าม...")
+                continue
+                
             latest_data = df.iloc[-1]
             strat_name = strategy.__class__.__name__
 
@@ -355,9 +365,9 @@ def run_bot(
             except Exception as e:
                 print(f"❌ Failed to persist config: {e}")
 
-        print(
-            f"[{datetime.now(BANGKOK_TZ).strftime('%H:%M:%S')}] จบรอบการทำงาน. รอรอบถัดไป..."
-        )
+        msg_finish = f"🏁 [{datetime.now(BANGKOK_TZ).strftime('%H:%M:%S')}] จบรอบการทำงานปกติ"
+        print(msg_finish)
+        # notifier.send(msg_finish) # Optional: Send to telegram if you want it to be very clear
 
     except Exception as e:
         error_msg = f"❌ เกิดข้อผิดพลาดใน Main Loop: {e}"
