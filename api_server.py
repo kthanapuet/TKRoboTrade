@@ -13,9 +13,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # นำเข้า Notifier ที่ทำไว้
 from utils.notifier import Notifier
+import market_scanner
 
 PORT = 5000
 CONFIG_PATH = "config.json"
+PORTFOLIO_PATH = "portfolio.json"
 
 # กำหนดตัวแจ้งเตือน
 notifier = Notifier()
@@ -25,6 +27,7 @@ class PortfolioAPIHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, DELETE, PUT, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
         super().end_headers()
 
     def do_OPTIONS(self):
@@ -38,18 +41,62 @@ class PortfolioAPIHandler(http.server.SimpleHTTPRequestHandler):
             
         if self.path.startswith('/api/portfolio'):
             try:
-                with open(CONFIG_PATH, "r") as f:
-                    config = json.load(f)
-                portfolio = config.get("portfolio", [])
+                with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
+                    portfolio = json.load(f)
+                
+                response_data = json.dumps(portfolio).encode()
                 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
-                self.wfile.write(json.dumps(portfolio).encode())
+                self.wfile.write(response_data)
             except Exception as e:
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode())
+        elif self.path.startswith('/api/scan?'):
+            parsed_path = urllib.parse.urlparse(self.path)
+            query = urllib.parse.parse_qs(parsed_path.query)
+            market = query.get("market", ["TH"])[0]
+            
+            try:
+                results = market_scanner.run_scan(market)
+                response_data = json.dumps(results).encode()
+                
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(response_data)
+            except Exception as e:
+                self.send_error_response(500, str(e))
+        elif self.path == '/api/scan-portfolio':
+            try:
+                with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
+                    portfolio = json.load(f)
+                
+                symbols = [item["symbol"] for item in portfolio]
+                results = market_scanner.scan_symbols(symbols)
+                
+                # Auto update tags in portfolio.json based on scan results
+                for item in portfolio:
+                    for res in results:
+                        if res["symbol"] == item["symbol"]:
+                            # Ignore error tags if it fails to fetch momentarily
+                            if "❌" not in res["tags"][0]:
+                                item["tags"] = res["tags"]
+                            break
+                            
+                with open(PORTFOLIO_PATH, "w", encoding="utf-8") as f:
+                    json.dump(portfolio, f, indent=4, ensure_ascii=False)
+                
+                response_data = json.dumps(results).encode()
+                
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(response_data)
+            except Exception as e:
+                self.send_error_response(500, str(e))
         else:
             return super().do_GET()
 
@@ -83,10 +130,8 @@ class PortfolioAPIHandler(http.server.SimpleHTTPRequestHandler):
                 
             # Add to config
             try:
-                with open(CONFIG_PATH, "r") as f:
-                    config = json.load(f)
-                    
-                portfolio = config.get("portfolio", [])
+                with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
+                    portfolio = json.load(f)
                 
                 # Check if exists
                 for item in portfolio:
@@ -97,13 +142,12 @@ class PortfolioAPIHandler(http.server.SimpleHTTPRequestHandler):
                 portfolio.append({
                     "symbol": symbol,
                     "allocation_check": 0.1,
-                    "enabled": True
+                    "enabled": True,
+                    "tags": data.get("tags", ["✋ Manual"])
                 })
                 
-                config["portfolio"] = portfolio
-                
-                with open(CONFIG_PATH, "w") as f:
-                    json.dump(config, f, indent=4)
+                with open(PORTFOLIO_PATH, "w", encoding="utf-8") as f:
+                    json.dump(portfolio, f, indent=4, ensure_ascii=False)
                     
                 # แจ้งเตือนเมื่อมีการเพิ่มสำเร็จ
                 notifier.send(f"🟢 [System] มีการเพิ่มรายชื่อหุ้น {symbol} เข้าสู่พอร์ตระบบเทรดเรียบร้อยแล้ว!")
@@ -127,10 +171,9 @@ class PortfolioAPIHandler(http.server.SimpleHTTPRequestHandler):
             symbol = query.get("symbol", [""])[0]
             
             try:
-                with open(CONFIG_PATH, "r") as f:
-                    config = json.load(f)
+                with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
+                    portfolio = json.load(f)
                     
-                portfolio = config.get("portfolio", [])
                 found = False
                 is_enabled_now = False
                 for item in portfolio:
@@ -145,9 +188,8 @@ class PortfolioAPIHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_error_response(404, "Symbol not found")
                     return
                     
-                config["portfolio"] = portfolio
-                with open(CONFIG_PATH, "w") as f:
-                    json.dump(config, f, indent=4)
+                with open(PORTFOLIO_PATH, "w", encoding="utf-8") as f:
+                    json.dump(portfolio, f, indent=4, ensure_ascii=False)
                     
                 # แจ้งเตือนเมื่อสลับโหมด
                 status_text = "เปิดใช้งานพอร์ต (Enabled)" if is_enabled_now else "ระงับการเทรดชั่วคราว (Disabled)"
@@ -172,10 +214,9 @@ class PortfolioAPIHandler(http.server.SimpleHTTPRequestHandler):
                 return
                 
             try:
-                with open(CONFIG_PATH, "r") as f:
-                    config = json.load(f)
+                with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
+                    portfolio = json.load(f)
                     
-                portfolio = config.get("portfolio", [])
                 initial_len = len(portfolio)
                 # Keep items that are NOT the symbol
                 portfolio = [item for item in portfolio if item["symbol"] != symbol]
@@ -184,9 +225,8 @@ class PortfolioAPIHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_error_response(404, "Symbol not found")
                     return
                     
-                config["portfolio"] = portfolio
-                with open(CONFIG_PATH, "w") as f:
-                    json.dump(config, f, indent=4)
+                with open(PORTFOLIO_PATH, "w", encoding="utf-8") as f:
+                    json.dump(portfolio, f, indent=4, ensure_ascii=False)
                     
                 # แจ้งเตือนมื่อลบทิ้ง
                 notifier.send(f"🔴 [System] หุ้น {symbol} ถูกถอดออกจากพอร์ตระบบการเทรดแล้ว")

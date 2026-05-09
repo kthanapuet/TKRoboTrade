@@ -33,14 +33,28 @@ from utils.notifier import Notifier
 # ---------------------------------------------------------
 def is_market_open():
     now = datetime.now(BANGKOK_TZ)
-    if now.weekday() > 4:  # เสาร์ (5) - อาทิตย์ (6)
-        return False
-
+    weekday = now.weekday()
     current_time = now.time()
-    morning_session = datetime_time(10, 0) <= current_time <= datetime_time(12, 30)
-    afternoon_session = datetime_time(14, 30) <= current_time <= datetime_time(16, 30)
 
-    return morning_session or afternoon_session
+    # 1. ช่วงเวลาตลาดปกติ (จันทร์ - ศุกร์)
+    if weekday <= 4:
+        # ช่วงเช้า (SET)
+        if datetime_time(9, 30) <= current_time <= datetime_time(12, 35):
+            return True
+        # ช่วงบ่าย (SET)
+        if datetime_time(13, 55) <= current_time <= datetime_time(17, 0):
+            return True
+        # ช่วงดึก (DRx / US Market Night Session)
+        if datetime_time(20, 0) <= current_time <= datetime_time(23, 59, 59):
+            return True
+
+    # 2. ช่วงเช้ามืด (อังคาร - เสาร์) สำหรับ Night Session ที่ลากยาวจากคืนก่อนหน้า
+    if 1 <= weekday <= 5:
+        # รองรับถึง 04:05 น. (เผื่อเวลาปิดตลาด US)
+        if datetime_time(0, 0) <= current_time <= datetime_time(4, 5):
+            return True
+
+    return False
 
 
 # ---------------------------------------------------------
@@ -234,10 +248,10 @@ def run_bot(
                     print("   ⚠️ (Buy Signal) แต่มี Order รออยู่แล้ว -> Skip Duplicate")
 
             elif latest_data["Position"] == -2:  # Sell Signal
-                if current_vol > 0:
-                    action = "SELL"
-                else:
-                    print("   ⚠️ (Sell Signal) แต่ไม่มีของ -> Skip")
+                # Always set action to SELL to send notification
+                action = "SELL"
+                if current_vol == 0:
+                    print("   ⚠️ (Sell Signal) ไม่มีของในพอร์ต แต่จะส่งแจ้งเตือน")
 
             # 4.2 Send Order
             if action == "BUY":
@@ -325,16 +339,19 @@ def run_bot(
                 notifier.send(msg)
 
                 try:
-                    # ขายหมดพอร์ต (Clear Position)
-                    order = equity.place_order(
-                        pin=pin,
-                        symbol=trade_symbol,
-                        side="Sell",
-                        volume=current_vol,  # ขายเท่าที่มี
-                        price=latest_price,
-                        price_type="Limit",
-                    )
-                    notifier.send(f"✅ Order Sent: {order.get('order_no', 'N/A')}")
+                    if current_vol > 0:
+                        # ขายหมดพอร์ต (Clear Position)
+                        order = equity.place_order(
+                            pin=pin,
+                            symbol=trade_symbol,
+                            side="Sell",
+                            volume=current_vol,  # ขายเท่าที่มี
+                            price=latest_price,
+                            price_type="Limit",
+                        )
+                        notifier.send(f"✅ Order Sent: {order.get('order_no', 'N/A')}")
+                    else:
+                        print("   ⚠️ ข้ามการส่งคำสั่งขายไปยังโบรคเกอร์เนื่องจากจำนวนหุ้นในพอร์ตเป็น 0")
 
                     # Clear tracking
                     if trade_symbol in trade_tracker:
@@ -345,13 +362,12 @@ def run_bot(
             else:
                 print("   💤 Wait...")
 
-        # อัปเดตลงไฟล์ config.json ถ้ามีการเปลี่ยนแปลงของ signal/trend
+        # อัปเดตลงไฟล์ portfolio.json ถ้ามีการเปลี่ยนแปลงของ signal/trend
         if config_changed:
             try:
-                with open("config.json", "r", encoding="utf-8") as f:
-                    app_config = json.load(f)
+                with open("portfolio.json", "r", encoding="utf-8") as f:
+                    app_portfolio = json.load(f)
 
-                app_portfolio = app_config.get("portfolio", [])
                 for app_item in app_portfolio:
                     for mem_item in portfolio_config:
                         if app_item["symbol"] == mem_item["symbol"]:
@@ -360,10 +376,10 @@ def run_bot(
                                 "long_term_trend", ""
                             )
 
-                with open("config.json", "w", encoding="utf-8") as f:
-                    json.dump(app_config, f, indent=4, ensure_ascii=False)
+                with open("portfolio.json", "w", encoding="utf-8") as f:
+                    json.dump(app_portfolio, f, indent=4, ensure_ascii=False)
             except Exception as e:
-                print(f"❌ Failed to persist config: {e}")
+                print(f"❌ Failed to persist portfolio: {e}")
 
         msg_finish = f"🏁 [{datetime.now(BANGKOK_TZ).strftime('%H:%M:%S')}] จบรอบการทำงานปกติ"
         print(msg_finish)
@@ -519,18 +535,24 @@ if __name__ == "__main__":
         print("❌ ไม่พบข้อมูล Config ในไฟล์ .env")
         exit()
 
-    # 2. ดึง Config JSON
+    # 2. ดึง Config JSON & Portfolio JSON
     try:
         with open("config.json", "r") as f:
             app_config = json.load(f)
-            portfolio_config = app_config.get("portfolio", [])
             strategies_config = app_config.get("strategies", {})
     except FileNotFoundError:
         print("❌ ไม่พบไฟล์ config.json")
         exit()
 
+    try:
+        with open("portfolio.json", "r", encoding="utf-8") as f:
+            portfolio_config = json.load(f)
+    except FileNotFoundError:
+        print("❌ ไม่พบไฟล์ portfolio.json")
+        exit()
+
     if not portfolio_config:
-        print("❌ ไม่พบ Portfolio Config ในไฟล์ JSON")
+        print("❌ ไม่พบข้อมูลใน portfolio.json")
         exit()
 
     # 3. เตรียม Tools & Build Strategies Map
@@ -603,8 +625,8 @@ if __name__ == "__main__":
             summary_sent = False
 
         # 2. Heartbeat Check (Every hour at minute 0-5)
-        # ส่ง Heartbeat เฉพาะวันทำการ 08:00 - 17:00 (จะได้ไม่รบกวนเวลานอน/วันหยุด)
-        if now.weekday() <= 4 and 8 <= now.hour <= 17:
+        # ส่ง Heartbeat เฉพาะวันทำการ และในช่วงที่ตลาดเปิด (รวมช่วงดึก)
+        if is_market_open() or (8 <= now.hour <= 17 and now.weekday() <= 4):
             if now.minute < 5 and now.hour != last_heartbeat_hour:
                 try:
                     # Simple API Ping

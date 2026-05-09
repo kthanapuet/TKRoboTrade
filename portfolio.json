@@ -1,0 +1,18 @@
+[
+    {
+        "symbol": "AMZN80.BK",
+        "allocation_check": 0.1,
+        "enabled": true,
+        "tags": [
+            "🌟 All-Star"
+        ]
+    },
+    {
+        "symbol": "BH.BK",
+        "allocation_check": 0.1,
+        "enabled": true,
+        "tags": [
+            "🌟 All-Star"
+        ]
+    }
+]

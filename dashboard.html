@@ -51,6 +51,7 @@
             padding: 3rem;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
         }
 
         @keyframes fadeUp {
@@ -107,7 +108,7 @@
             background: var(--primary);
             color: #000;
             border: none;
-            padding: 0 2rem;
+            padding: 1rem 2rem;
             border-radius: 12px;
             font-size: 1.1rem;
             font-weight: 600;
@@ -378,11 +379,177 @@
             }
         }
 
+        /* --- Hamburger Menu --- */
+        .menu-container {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+
+        .hamburger {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            gap: 5px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .hamburger:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .hamburger span {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background-color: var(--text);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 55px;
+            right: 0;
+            background: var(--surface-hover);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            min-width: 220px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            animation: fadeUp 0.2s ease;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--primary);
+        }
+
+        /* --- Modal Styles --- */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 2000; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.8); 
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: var(--bg-color);
+            margin: 5% auto; 
+            padding: 2rem;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            width: 80%;
+            max-width: 900px;
+            color: var(--text);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            animation: fadeUp 0.4s ease;
+        }
+
+        .close {
+            color: var(--text-muted);
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: var(--danger);
+            text-decoration: none;
+        }
+        
+        select {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            outline: none;
+            flex: 1;
+        }
+
+        .scan-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.15);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 0.8rem;
+        }
+        .scan-tags span {
+            font-size: 0.85rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 8px;
+            margin-right: 0.5rem;
+            background: rgba(255,255,255,0.1);
+        }
+        .scan-add-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
+        <!-- Hamburger Menu -->
+        <div class="menu-container">
+            <div class="hamburger" onclick="toggleMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="dropdown-menu" id="dropdownMenu">
+                <div class="dropdown-item" onclick="openScanner(); toggleMenu()">
+                    🔍 Market Scanner
+                </div>
+                <div class="dropdown-item" onclick="openPortfolioHealth(); toggleMenu()">
+                    📋 Portfolio Health Check
+                </div>
+            </div>
+        </div>
+
         <header>
             <h1>TKRoboTrade Portfolio</h1>
             <p class="subtitle">Manage and validate your active trading symbols</p>
@@ -399,6 +566,38 @@
         <ul class="portfolio-list" id="portfolioList">
             <!-- Items injected by JS -->
         </ul>
+    </div>
+
+    <!-- Scanner Modal -->
+    <div id="scannerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeScanner()">&times;</span>
+            <h2 style="margin-bottom: 1.5rem;">🔍 Market Scanner</h2>
+            <div class="input-group" style="margin-bottom: 1.5rem;">
+                <select id="scanMarket">
+                    <option value="TH">🇹🇭 Thai Market (SET50)</option>
+                    <option value="US">🇺🇸 US Market (S&P 500)</option>
+                    <option value="DR">🌐 Global DRs (SET)</option>
+                </select>
+                <button onclick="runScan()" id="scanBtn">
+                    Run Scan <div class="loader" id="scanLoader"></div>
+                </button>
+            </div>
+            <div id="scanResults" class="portfolio-list">
+                <div class="empty-state">Select a market and click Run Scan</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portfolio Health Modal -->
+    <div id="healthModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeHealthModal()">&times;</span>
+            <h2 style="margin-bottom: 1.5rem;">📋 Portfolio Health Check</h2>
+            <div id="healthResults" class="portfolio-list">
+                <div class="empty-state">Loading portfolio status...</div>
+            </div>
+        </div>
     </div>
 
     <button id="scrollTopBtn" title="Go to top">↑</button>
@@ -421,6 +620,7 @@
             try {
                 const res = await fetch(API_URL);
                 const data = await res.json();
+                window.currentPortfolioData = data; // Store globally for scanner to use
                 renderPortfolio(data);
             } catch (err) {
                 showError("Failed to load portfolio: " + err.message);
@@ -439,13 +639,15 @@
 
             items.forEach(item => {
                 const isEnabled = item.enabled !== false; // Default to true
+                const itemTags = item.tags || ["✋ Manual"]; // Default if missing
+                const tagsHtml = itemTags.map(t => `<span style="font-size: 0.75rem; background: ${t.includes('All-Star') ? 'rgba(255,215,0,0.2)' : (t.includes('ไม่เข้าเงื่อนไข') || t.includes('Error') ? 'rgba(255,23,68,0.2)' : 'rgba(255,255,255,0.1)')}; padding: 0.2rem 0.5rem; border-radius: 6px; margin-left: 0.5rem; font-weight: normal; vertical-align: middle;">${t}</span>`).join('');
                 
                 const li = document.createElement('li');
                 li.className = 'portfolio-item';
                 
                 li.innerHTML = `
                     <div class="symbol-info">
-                        <span class="symbol-name" style="opacity: ${isEnabled ? '1' : '0.5'}">${item.symbol}</span>
+                        <span class="symbol-name" style="opacity: ${isEnabled ? '1' : '0.5'}">${item.symbol}${tagsHtml}</span>
                         <span class="symbol-status ${isEnabled ? 'status-active' : 'status-disabled'}">
                             ${isEnabled ? 'Active' : 'Disabled'}
                         </span>
@@ -465,10 +667,14 @@
             if(e.key === 'Enter') addSymbol();
         }
 
-        async function addSymbol() {
+        async function addSymbol(providedTags = null) {
             const input = document.getElementById('symbolInput');
             const symbol = input.value.trim().toUpperCase();
             if(!symbol) return;
+            
+            // If called from UI button click, providedTags will be a pointer event, so check Array
+            const isManual = !Array.isArray(providedTags);
+            const tags = isManual ? ["✋ Manual"] : providedTags;
 
             setLoading(true);
             showError("");
@@ -477,7 +683,7 @@
                 const res = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ symbol })
+                    body: JSON.stringify({ symbol, tags })
                 });
 
                 const data = await res.json();
@@ -543,6 +749,223 @@
                 behavior: 'smooth'
             });
         });
+
+        // Hamburger Menu Logic
+        function toggleMenu() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
+
+        // Close menu if clicked outside
+        window.addEventListener('click', function(e) {
+            const menuContainer = document.querySelector('.menu-container');
+            const modal = document.getElementById('scannerModal');
+            const healthModal = document.getElementById('healthModal');
+            
+            if (menuContainer && !menuContainer.contains(e.target)) {
+                document.getElementById('dropdownMenu').classList.remove('show');
+            }
+            if (e.target == modal) {
+                closeScanner();
+            }
+            if (e.target == healthModal) {
+                closeHealthModal();
+            }
+        });
+
+        // --- Scanner Logic ---
+        function openScanner() {
+            document.getElementById('scannerModal').style.display = 'block';
+        }
+
+        function closeScanner() {
+            document.getElementById('scannerModal').style.display = 'none';
+        }
+
+        async function runScan() {
+            const market = document.getElementById('scanMarket').value;
+            const btn = document.getElementById('scanBtn');
+            const loader = document.getElementById('scanLoader');
+            const resultsDiv = document.getElementById('scanResults');
+            
+            btn.disabled = true;
+            loader.style.display = 'inline-block';
+            resultsDiv.innerHTML = `
+                <div class="loading-state">
+                    <div class="main-spinner"></div>
+                    <div style="color: var(--text-muted);">Scanning ${market} market... This may take a minute.</div>
+                </div>
+            `;
+
+            try {
+                const res = await fetch(`/api/scan?market=${market}`);
+                const data = await res.json();
+                
+                if (data.error) throw new Error(data.error);
+
+                if (data.length === 0) {
+                    resultsDiv.innerHTML = `<div class="empty-state">No stocks met the criteria today.</div>`;
+                    return;
+                }
+
+                resultsDiv.innerHTML = '';
+                const existingSymbols = window.currentPortfolioData ? window.currentPortfolioData.map(p => p.symbol) : [];
+
+                data.forEach(item => {
+                    const isInPortfolio = existingSymbols.includes(item.symbol);
+                    const tagsHtml = item.tags.map(t => `<span style="background: ${t.includes('All-Star') ? 'rgba(255,215,0,0.2)' : (t.includes('ไม่เข้าเงื่อนไข') || t.includes('Error') ? 'rgba(255,23,68,0.2)' : 'rgba(255,255,255,0.1)')}">${t}</span>`).join('');
+                    
+                    const bgStyle = isInPortfolio ? 'background: rgba(255,255,255,0.03); opacity: 0.6; border: 1px solid rgba(255,255,255,0.05);' : '';
+                    const btnHtml = isInPortfolio 
+                        ? `<button class="scan-add-btn" style="background: rgba(255,255,255,0.1); color: #888; cursor: not-allowed; box-shadow: none;" disabled>✅ Added</button>`
+                        : `<button class="scan-add-btn" onclick="addScannedSymbol('${item.symbol}', '${item.tags.join(',')}')">➕ Add</button>`;
+
+                    resultsDiv.innerHTML += `
+                        <div class="scan-item" style="${bgStyle}">
+                            <div>
+                                <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.1rem;">
+                                    ${item.symbol} <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: normal;">($${item.price})</span>
+                                </div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 400;">
+                                    ${item.name || ''}
+                                </div>
+                                <div class="scan-tags">${tagsHtml}</div>
+                            </div>
+                            ${btnHtml}
+                        </div>
+                    `;
+                });
+                
+            } catch (err) {
+                resultsDiv.innerHTML = `<div class="empty-state" style="color:var(--danger)">Error: ${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+
+        async function addScannedSymbol(symbol, tagsStr) {
+            const tags = tagsStr ? tagsStr.split(',') : ["✋ Manual"];
+            document.getElementById('symbolInput').value = symbol;
+            closeScanner();
+            await addSymbol(tags);
+        }
+
+        // --- Health Check Logic ---
+        function openPortfolioHealth() {
+            document.getElementById('healthModal').style.display = 'block';
+            runHealthCheck();
+        }
+
+        function closeHealthModal() {
+            document.getElementById('healthModal').style.display = 'none';
+        }
+
+        async function runHealthCheck() {
+            const resultsDiv = document.getElementById('healthResults');
+            
+            resultsDiv.innerHTML = `
+                <div class="loading-state">
+                    <div class="main-spinner"></div>
+                    <div style="color: var(--text-muted);">Analyzing your portfolio... This may take a minute.</div>
+                </div>
+            `;
+
+            try {
+                const res = await fetch(`/api/scan-portfolio`);
+                const data = await res.json();
+                
+                if (data.error) throw new Error(data.error);
+
+                // Refresh main portfolio list instantly to update badges
+                fetchPortfolio();
+
+                if (data.length === 0) {
+                    resultsDiv.innerHTML = `<div class="empty-state">Portfolio is empty.</div>`;
+                    return;
+                }
+
+                resultsDiv.innerHTML = '';
+                const existingPortfolio = window.currentPortfolioData || [];
+
+                data.forEach(item => {
+                    const portfolioItem = existingPortfolio.find(p => p.symbol === item.symbol);
+                    const isEnabled = portfolioItem ? portfolioItem.enabled !== false : true;
+                    
+                    const isBad = !item.fund_pass && !item.tech_pass;
+                    const tagsHtml = item.tags.map(t => `<span style="background: ${t.includes('All-Star') ? 'rgba(255,215,0,0.2)' : (t.includes('ไม่เข้าเงื่อนไข') || t.includes('Error') ? 'rgba(255,23,68,0.2)' : 'rgba(255,255,255,0.1)')}">${t}</span>`).join('');
+                    
+                    let actionHtml = '';
+                    if (isBad) {
+                        const toggleBtnText = isEnabled ? '⏸️ Disable' : '▶️ Enable';
+                        const toggleBtnColor = isEnabled ? '#f59e0b' : '#10b981';
+                        
+                        actionHtml = `
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button class="scan-add-btn" style="background: rgba(255,255,255,0.05); color: ${toggleBtnColor}; border: 1px solid ${toggleBtnColor}; box-shadow: none;" onclick="toggleSymbolFromHealth('${item.symbol}', this)">${toggleBtnText}</button>
+                                <button class="scan-add-btn" style="background: rgba(255,23,68,0.1); color: var(--danger); border: 1px solid rgba(255,23,68,0.3); box-shadow: none;" onmouseover="this.style.background='var(--danger)'; this.style.color='#fff'" onmouseout="this.style.background='rgba(255,23,68,0.1)'; this.style.color='var(--danger)'" onclick="removeBadSymbol('${item.symbol}')">🗑️ Remove</button>
+                            </div>
+                        `;
+                    } else {
+                        actionHtml = `<span style="color: var(--primary); font-size: 0.9rem; font-weight: 500;">✅ Good</span>`;
+                    }
+
+                    resultsDiv.innerHTML += `
+                        <div class="scan-item" id="health-item-${item.symbol.replace('.', '-')}">
+                            <div>
+                                <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.1rem;">
+                                    ${item.symbol} <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: normal;">($${item.price})</span>
+                                </div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 400;">
+                                    ${item.name || ''}
+                                </div>
+                                <div class="scan-tags">${tagsHtml}</div>
+                            </div>
+                            <div>${actionHtml}</div>
+                        </div>
+                    `;
+                });
+                
+            } catch (err) {
+                resultsDiv.innerHTML = `<div class="empty-state" style="color:var(--danger)">Error: ${err.message}</div>`;
+            }
+        }
+
+        async function removeBadSymbol(symbol) {
+            if(!confirm(`Are you sure you want to remove ${symbol} from portfolio?`)) return;
+            
+            try {
+                await fetch(`${API_URL}?symbol=${encodeURIComponent(symbol)}`, { method: 'DELETE' });
+                const itemDiv = document.getElementById(`health-item-${symbol.replace('.', '-')}`);
+                if (itemDiv) itemDiv.remove();
+                await fetchPortfolio();
+            } catch (err) {
+                alert("Failed to delete: " + err.message);
+            }
+        }
+        async function toggleSymbolFromHealth(symbol, btnElement) {
+            btnElement.disabled = true;
+            try {
+                await fetch(`${API_URL}/toggle?symbol=${encodeURIComponent(symbol)}`, { method: 'PUT' });
+                await fetchPortfolio(); // refresh global state
+                
+                const pItem = window.currentPortfolioData.find(p => p.symbol === symbol);
+                const isEnabled = pItem ? pItem.enabled !== false : true;
+                
+                if(isEnabled) {
+                    btnElement.innerHTML = '⏸️ Disable';
+                    btnElement.style.color = '#f59e0b';
+                    btnElement.style.borderColor = '#f59e0b';
+                } else {
+                    btnElement.innerHTML = '▶️ Enable';
+                    btnElement.style.color = '#10b981';
+                    btnElement.style.borderColor = '#10b981';
+                }
+            } catch (err) {
+                alert("Failed to toggle: " + err.message);
+            } finally {
+                btnElement.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>
