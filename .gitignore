@@ -23,5 +23,8 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Config
-# portfolio.json
+# Config and Private Data
+portfolio.json
+bot.log
+run_bot.sh
+test_log.txt

@@ -84,6 +84,9 @@ class PortfolioAPIHandler(http.server.SimpleHTTPRequestHandler):
                             # Ignore error tags if it fails to fetch momentarily
                             if "❌" not in res["tags"][0]:
                                 item["tags"] = res["tags"]
+                                # Sync name if it exists
+                                if "name" in res:
+                                    item["name"] = res["name"]
                             break
                             
                 with open(PORTFOLIO_PATH, "w", encoding="utf-8") as f:
@@ -139,8 +142,10 @@ class PortfolioAPIHandler(http.server.SimpleHTTPRequestHandler):
                         self.send_error_response(400, f"Symbol {symbol} already exists in portfolio")
                         return
                         
+                full_name = ticker.info.get('longName') or ticker.info.get('shortName') or symbol
                 portfolio.append({
                     "symbol": symbol,
+                    "name": full_name,
                     "allocation_check": 0.1,
                     "enabled": True,
                     "tags": data.get("tags", ["✋ Manual"])

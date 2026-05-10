@@ -646,11 +646,14 @@
                 li.className = 'portfolio-item';
                 
                 li.innerHTML = `
-                    <div class="symbol-info">
-                        <span class="symbol-name" style="opacity: ${isEnabled ? '1' : '0.5'}">${item.symbol}${tagsHtml}</span>
-                        <span class="symbol-status ${isEnabled ? 'status-active' : 'status-disabled'}">
-                            ${isEnabled ? 'Active' : 'Disabled'}
-                        </span>
+                    <div class="symbol-info" style="flex-direction: column; align-items: flex-start; gap: 0.2rem;">
+                        <div style="display: flex; align-items: center;">
+                            <span class="symbol-name" style="opacity: ${isEnabled ? '1' : '0.5'}">${item.symbol}${tagsHtml}</span>
+                            <span class="symbol-status ${isEnabled ? 'status-active' : 'status-disabled'}" style="margin-left: 1rem;">
+                                ${isEnabled ? 'Active' : 'Disabled'}
+                            </span>
+                        </div>
+                        ${item.name ? `<div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.1rem; font-weight: 400;">${item.name}</div>` : ''}
                     </div>
                     <div class="actions">
                         <button class="btn-toggle" onclick="toggleSymbol('${item.symbol}')">
