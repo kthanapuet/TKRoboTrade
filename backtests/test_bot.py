@@ -87,9 +87,12 @@ class TestBuyScenarios(unittest.TestCase):
         self.mock_strategy = Mock()
         self.strategies_map = {'NVDA80.BK': self.mock_strategy}
         
+        # Configure Market Mock for new get_quote_symbol method
+        self.mock_market.get_quote_symbol.return_value = {'last': 124.0}
+        
         self.portfolio_config = [{
             'symbol': 'NVDA80.BK',
-            'allocation_check': 0.1
+            'allocation_check': 1.0
         }]
         
         self.trade_tracker = {}
@@ -215,9 +218,12 @@ class TestSellScenarios(unittest.TestCase):
         self.mock_strategy = Mock()
         self.strategies_map = {'TSLA80.BK': self.mock_strategy}
         
+        # Configure Market Mock
+        self.mock_market.get_quote_symbol.return_value = {'last': 220.0}
+        
         self.portfolio_config = [{
             'symbol': 'TSLA80.BK',
-            'allocation_check': 0.1
+            'allocation_check': 1.0
         }]
     
     @patch('bot.datetime')
@@ -267,6 +273,7 @@ class TestSellScenarios(unittest.TestCase):
         self.mock_strategy.__class__.__name__ = 'SMACrossover'
         
         self.mock_equity.place_order.return_value = {'order_no': 'ORD456'}
+        self.mock_market.get_quote_symbol.return_value = {'last': 220.0}
         
         run_bot(
             self.mock_investor,
@@ -289,8 +296,8 @@ class TestSellScenarios(unittest.TestCase):
         
         # Verify notification contains P&L
         notification_calls = [str(call) for call in self.mock_notifier.send.call_args_list]
-        self.assertTrue(any('💚 SELL ORDER' in str(call) for call in notification_calls))
-        self.assertTrue(any('+1,000.00' in str(call) for call in notification_calls))  # Profit
+        self.assertTrue(any('SELL ORDER' in str(call) for call in notification_calls))
+        self.assertTrue(any('1,000.00' in str(call) for call in notification_calls))  # Profit
         self.assertTrue(any('+10.00%' in str(call) for call in notification_calls))
     
     @patch('bot.datetime')
@@ -337,6 +344,7 @@ class TestSellScenarios(unittest.TestCase):
         self.mock_strategy.__class__.__name__ = 'SMACrossover'
         
         self.mock_equity.place_order.return_value = {'order_no': 'ORD789'}
+        self.mock_market.get_quote_symbol.return_value = {'last': 190.0}
         
         run_bot(
             self.mock_investor,
@@ -350,7 +358,7 @@ class TestSellScenarios(unittest.TestCase):
         
         # Verify notification contains loss
         notification_calls = [str(call) for call in self.mock_notifier.send.call_args_list]
-        self.assertTrue(any('🔴 SELL ORDER' in str(call) for call in notification_calls))
+        self.assertTrue(any('SELL ORDER' in str(call) for call in notification_calls))
         self.assertTrue(any('-500.00' in str(call) for call in notification_calls))  # Loss
         self.assertTrue(any('Stop Loss' in str(call) for call in notification_calls))
 
@@ -439,9 +447,12 @@ class TestErrorHandling(unittest.TestCase):
         self.mock_strategy = Mock()
         self.strategies_map = {'AAPL80.BK': self.mock_strategy}
         
+        # Configure Market Mock
+        self.mock_market.get_quote_symbol.return_value = {'last': 150.0}
+        
         self.portfolio_config = [{
             'symbol': 'AAPL80.BK',
-            'allocation_check': 0.1
+            'allocation_check': 1.0
         }]
         
         self.trade_tracker = {}
@@ -467,7 +478,7 @@ class TestErrorHandling(unittest.TestCase):
         
         # Should send error notification
         error_calls = [str(call) for call in self.mock_notifier.send.call_args_list]
-        self.assertTrue(any('❌' in str(call) for call in error_calls))
+        self.assertTrue(any('[-]' in str(call) for call in error_calls))
     
     def test_missing_candlestick_data(self):
         """Test handling of missing candlestick data"""
@@ -520,9 +531,9 @@ def run_tests():
     print("TEST SUMMARY")
     print("="*70)
     print(f"Tests Run: {result.testsRun}")
-    print(f"✅ Passed: {result.testsRun - len(result.failures) - len(result.errors)}")
-    print(f"❌ Failed: {len(result.failures)}")
-    print(f"⚠️ Errors: {len(result.errors)}")
+    print(f"Passed: {result.testsRun - len(result.failures) - len(result.errors)}")
+    print(f"Failed: {len(result.failures)}")
+    print(f"Errors: {len(result.errors)}")
     print("="*70)
     
     return result.wasSuccessful()

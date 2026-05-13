@@ -7,11 +7,14 @@ import os
 import sys
 
 # ---------------------------------------------------------
-# เพิ่ม Path เพื่อเรียก Module Strategies/Utils ได้
+# Add Path to access Modules
 # ---------------------------------------------------------
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from strategies.sma_cross import SMACrossover
+from strategies.ema_cross import EMACrossover
+from strategies.supertrend import Supertrend
+from strategies.bbands_rsi import BollingerRSI
 
 
 class PortfolioBacktester:
@@ -32,22 +35,32 @@ class PortfolioBacktester:
             with open("config.json", "r") as f:
                 self.app_config = json.load(f)
                 self.strategies_config = self.app_config.get("strategies", {})
-                self.portfolio_config = self.app_config.get("portfolio", [])
-        except FileNotFoundError:
-            print("❌ ไม่พบไฟล์ config.json")
+            
+            with open("portfolio.json", "r", encoding="utf-8") as f:
+                self.portfolio_config = json.load(f)
+        except FileNotFoundError as e:
+            print(f"[-] Config file not found: {e}")
             sys.exit(1)
 
         if not self.portfolio_config:
-            print("❌ ไม่พบการตั้งค่า portfolio ใน config.json")
+            print("[-] No portfolio settings found in portfolio.json")
             sys.exit(1)
 
         # Initialize Holdings
         for item in self.portfolio_config:
             self.holdings[item["symbol"]] = {"shares": 0, "cost_basis": 0}
 
-    def run(self):
-        print(f"📥 เริ่มต้น Portfolio Backtest ({self.start_date} - {self.end_date})")
-        print(f"💰 เงินทุนเริ่มต้นรวม: {self.initial_capital:,.2f} บาท")
+    def reset(self):
+        """Reset backtester state for a new run"""
+        self.cash = self.initial_capital
+        self.holdings = {sym: {"shares": 0, "cost_basis": 0} for sym in self.holdings}
+        self.portfolio_history = []
+        self.dates = []
+        self.trade_log = []
+
+    def run(self, strategy_name=None):
+        print(f"[+] Starting Portfolio Backtest ({self.start_date} - {self.end_date})")
+        print(f"[+] Initial Capital: {self.initial_capital:,.2f}")
 
         # 1. Download Data for ALL symbols
         data_store = {}
@@ -101,7 +114,7 @@ class PortfolioBacktester:
                 common_dates = common_dates.intersection(df.index)
 
         common_dates = common_dates.sort_values()
-        print(f"✅ พบวันทำการที่ตรงกัน: {len(common_dates)} วัน")
+        print(f"[+] Found common trading days: {len(common_dates)} days")
 
         # 3. Pre-calculate Strategy Signals
         signals_store = {}
@@ -115,13 +128,23 @@ class PortfolioBacktester:
                 continue
 
             # Merge base config with override
-            base_strat_name = self.app_config.get("active_strategy", "SMACrossover")
+            base_strat_name = strategy_name if strategy_name else self.app_config.get("active_strategy", "EMACrossover")
             base_config = self.strategies_config.get(base_strat_name, {}).copy()
             override_config = item.get("strategy_override", {})
             final_config = {**base_config, **override_config}
 
-            # Init Strategy (Currently support SMACrossover hardcoded, can be dynamic)
-            strategy = SMACrossover(final_config)
+            # Init Strategy
+            if base_strat_name == "SMACrossover":
+                strategy = SMACrossover(final_config)
+            elif base_strat_name == "EMACrossover":
+                strategy = EMACrossover(final_config)
+            elif base_strat_name == "Supertrend":
+                strategy = Supertrend(final_config)
+            elif base_strat_name == "BollingerRSI":
+                strategy = BollingerRSI(final_config)
+            else:
+                strategy = EMACrossover(final_config)
+
             strategies_instances[symbol] = strategy
 
             # Generate Signals
@@ -141,7 +164,7 @@ class PortfolioBacktester:
                 continue
 
         # 4. Simulation Loop (Day by Day)
-        print("🔄 เริ่มเดินเวลาแบบจำลอง...")
+        print("[*] Starting simulation loop...")
 
         for date in common_dates:
             # 1. Calculate Current Equity (Cash + Market Value of Holdings)
@@ -321,12 +344,12 @@ class PortfolioBacktester:
         ) * 100
 
         print("\n" + "=" * 50)
-        print("📊 PORTFOLIO BACKTEST RESULT")
+        print("PORTFOLIO BACKTEST RESULT")
         print("=" * 50)
-        print(f"💰 เงินเริ่มต้น:       {self.initial_capital:,.2f} บาท")
-        print(f"💸 มูลค่าพอร์ตสุดท้าย: {final_value:,.2f} บาท")
-        print(f"📈 กำไร/ขาดทุนรวม:    {total_return:.2f}%")
-        print(f"📝 จำนวนเทรดทั้งหมด:  {len(self.trade_log)}")
+        print(f"Initial Capital:   {self.initial_capital:,.2f}")
+        print(f"Final Value:       {final_value:,.2f}")
+        print(f"Total Return:      {total_return:.2f}%")
+        print(f"Total Trades:      {len(self.trade_log)}")
         print("=" * 50)
 
         # Breakdown by Symbol
@@ -354,6 +377,35 @@ if __name__ == "__main__":
     backtester = PortfolioBacktester(
         start_date="2014-01-01", end_date="2023-12-31", initial_capital=10000.0
     )
-    backtester.run()
-    backtester.stats()
+    
+    strategies_to_test = ["EMACrossover", "Supertrend", "BollingerRSI", "SMACrossover"]
+    comparison_results = []
+
+    print("="*60)
+    print("STARTING 10-YEAR STRATEGY COMPARISON (2014-2023)")
+    print("="*60)
+
+    for strat in strategies_to_test:
+        print(f"\n[RUNNING] Strategy: {strat}")
+        backtester.reset()
+        backtester.run(strategy_name=strat)
+        
+        final_value = backtester.portfolio_history[-1]
+        total_return = ((final_value - backtester.initial_capital) / backtester.initial_capital) * 100
+        total_trades = len(backtester.trade_log)
+        
+        comparison_results.append({
+            "Strategy": strat,
+            "Return (%)": total_return,
+            "Final Value": final_value,
+            "Trades": total_trades
+        })
+
+    # Print Comparison Table
+    print("\n" + "="*60)
+    print("FINAL STRATEGY COMPARISON SUMMARY")
+    print("="*60)
+    df_compare = pd.DataFrame(comparison_results)
+    print(df_compare.to_string(index=False))
+    print("="*60)
     # backtester.plot()
